@@ -65,8 +65,8 @@ def naive_attention(Q, K, V):
 
 if __name__ == "__main__":
     # Test different sequence lengths (N) and head dimensions (d)
-    sequence_lengths = [64, 128, 256, 512]
-    head_dimensions = [32, 64]
+    sequence_lengths = [32, 64, 128, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 20480, 24576]
+    head_dimensions = [64]
 
 
     print(f"{'Seq Len (N)':<14} | {'Head Dim (d)':<14} | {'Output Shape':<14} | {'Time (ms)':<10}")

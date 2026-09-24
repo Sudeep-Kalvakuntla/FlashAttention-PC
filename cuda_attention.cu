@@ -152,11 +152,38 @@ float cuda_attention(const float *hQ, const float *hK, const float *hV,
 
 int main()
 {
-    // Test different sequence lengths (N) and head dimensions (d)
-    int sequence_lengths[] = {64, 128, 256, 512};
-    int head_dimensions[] = {32, 64};
-    int num_lengths = 4;
-    int num_dims = 2;
+    // ---------------------------------------------------------
+    // 1. DUMMY WARMUP
+    // The first CUDA API call (and memory allocation) triggers
+    // driver initialization which can take hundreds of milliseconds.
+    // We run a small throwaway batch to absorb this transient overhead.
+    // ---------------------------------------------------------
+    printf("Warming up GPU context...\n");
+    int w_N = 64, w_d = 64;
+    float *wQ = (float *)malloc(w_N * w_d * sizeof(float));
+    float *wK = (float *)malloc(w_N * w_d * sizeof(float));
+    float *wV = (float *)malloc(w_N * w_d * sizeof(float));
+    float *wO = (float *)malloc(w_N * w_d * sizeof(float));
+    
+    random_matrix(wQ, w_N, w_d, 1);
+    random_matrix(wK, w_N, w_d, 2);
+    random_matrix(wV, w_N, w_d, 3);
+    
+    // Run it twice just to be absolutely sure instruction caches are hot
+    cuda_attention(wQ, wK, wV, wO, w_N, w_d);
+    cuda_attention(wQ, wK, wV, wO, w_N, w_d);
+    
+    free(wQ); free(wK); free(wV); free(wO);
+    printf("Warmup complete.\n\n");
+
+  
+    int sequence_lengths[] = {
+        32, 64, 128, 256, 384, 512, 768, 1024, 
+        1536, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 20480, 24576
+    };
+    int head_dimensions[] = {64}; // Keeping d constant to clearly see N scaling
+    int num_lengths = 18;
+    int num_dims = 1;
 
     printf("%-14s | %-14s | %-14s | %-10s\n",
            "Seq Len (N)", "Head Dim (d)", "Output Shape", "Time (ms)");
@@ -170,7 +197,6 @@ int main()
             int d = head_dimensions[a];
             int N = sequence_lengths[b];
 
-            // Generate random Q, K, V matrices
             float *Q = (float *)malloc((size_t)N * d * sizeof(float));
             float *K = (float *)malloc((size_t)N * d * sizeof(float));
             float *V = (float *)malloc((size_t)N * d * sizeof(float));
@@ -184,7 +210,7 @@ int main()
 
             char out_shape_str[32];
             sprintf(out_shape_str, "%d x %d", N, d);
-            printf("%-14d | %-14d | %-14s | %-10.2f\n",
+            printf("%-14d | %-14d | %-14s | %-10.3f\n",
                    N, d, out_shape_str, elapsed_ms);
 
             free(Q);
